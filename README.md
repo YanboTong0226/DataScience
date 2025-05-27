@@ -6,8 +6,10 @@ This is the sub-page containing my exciting data science projects using:
                               
 - R language (Regression, data visualization, data analysis, etc.),
 
+- Database Management including MySQL, NoSQL, and MongoDB,
+
 - Machine Learning techniques, 
 
-- Natural Language Processing projects with the Transformer architecture and others. 
+- And Natural Language Processing projects with the Transformer architecture and other approaches (currently working on). 
 
 Stay tuned for the upcoming impressive projects and related codes. Please feel free to view it and contact me if you are interested in my projects.
