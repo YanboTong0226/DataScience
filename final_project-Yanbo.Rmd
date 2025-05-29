@@ -1,0 +1,208 @@
+---
+---
+---
+
+```{r}
+library(readr) 
+# read CSV file 
+laptop <- read_csv("laptops_dataset_final_600.csv") 
+laptop 
+# save CSV file 
+write_csv(laptop, "laptops_project.csv")
+```
+
+```{r}
+# Data Cleaning Process
+# Check if there are missing values of "review" and "rating"
+laptop_cleaned <- laptop[!is.na(laptop$review) & !is.na(laptop$rating), ]
+laptop_cleaned
+
+```
+
+```{r}
+# Identify and remove duplicate records
+laptop_after_clean <- laptop_cleaned[!duplicated(laptop_cleaned[c("review", "rating")]), ]
+laptop_after_clean
+cat("Before removing duplicates:", nrow(laptop_cleaned), "\n")
+cat("After removing duplicates:", nrow(laptop_after_clean), "\n")
+
+```
+
+```{r}
+# Standardizing Ratings
+# Keep only rows where rating is between 1 and 5
+laptop_standardized <- laptop_after_clean[laptop_after_clean$rating >= 1 & laptop_after_clean$rating <= 5, ]
+laptop_standardized
+```
+
+```{r}
+# Data Preprocessing
+# Creating new features: Two new features based on the computer’s product name: ios_system and windows_system
+laptop_standardized$ios_system <- grepl("Macbook", laptop_standardized$product_name, ignore.case = TRUE)
+
+# Create windows_system: TRUE if product_name contains Windows/Win (case-insensitive)
+laptop_standardized$windows_system <- grepl("HP|DELL|Lenovo|SAMSUNG|ASUS|Acer|Primebook|CHUWI|Ultimus|MSI", laptop_standardized$product_name, ignore.case = TRUE)
+
+# Create chromebook_system
+laptop_standardized$chromebook_system <- grepl("Chromebook", laptop_standardized$product_name, ignore.case = TRUE)
+
+# Save and view the updated csv file 
+write.csv(laptop_standardized, "laptop_updated.csv", row.names = FALSE)
+updated <- read.csv("laptop_updated.csv")
+
+# View the first few rows in the console
+head(updated)
+```
+
+```{r}
+# Calculate the number of laptops with ios system, windows system, and chromebook
+sum(updated$ios_system == TRUE)
+sum(updated$windows_system == TRUE)
+sum(updated$chromebook_system == TRUE)
+```
+
+```{r}
+# Create a new column 'sentiment' based on 'rating' (e.g., 4-5 as 'positive,' 3 as 'neutral,' 1-2 as 'negative')
+library(dplyr)
+
+updated <- updated |>
+  mutate(sentiment = case_when(
+    rating >= 4 ~ "positive",
+    rating == 3 ~ "neutral",
+    rating <= 2 ~ "negative"
+  ))
+head(updated[c("rating", "sentiment")])
+
+```
+
+```{r}
+# Data visualization
+# Create the Scatter Plot to show the relationship between overall rating and the number of reviews
+# Count number of reviews per overall_rating
+overall_rating_counts <- table(updated$overall_rating)
+rating_df <- as.data.frame(overall_rating_counts)
+colnames(rating_df) <- c("overall_rating", "no_reviews")
+
+# Use ggplot2 for the scatter plot
+library(ggplot2)
+
+scatter_plot <- ggplot(rating_df, aes(x = overall_rating, y = no_reviews)) +
+  geom_point(color = "skyblue", size = 3) +
+  labs(title = "Overall Rating vs Number of Reviews",
+       x = "Overall Rating",
+       y = "Number of Reviews") +
+  theme_minimal()
+scatter_plot
+
+```
+
+```{r}
+# Create the bar chart to represent the distribution of average rating of the product (overall_rating) and number of reviews (no_reviews)
+
+library(ggplot2)
+
+# Assuming df_view has one row per product with columns: overall_rating and no_reviews
+ggplot(updated, aes(x = factor(overall_rating), y = no_reviews)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Number of Reviews by Overall Rating",
+       x = "Overall Rating",
+       y = "Number of Reviews") +
+  theme_minimal()
+
+```
+
+```{r}
+# Create the bar chart to represent the distribution of average rating of the product (overall_rating) and number of received ratings (no_ratings)
+library(ggplot2)
+
+# Assuming df_view has one row per product with columns: overall_rating and no_ratings
+ggplot(updated, aes(x = factor(overall_rating), y = no_ratings)) +
+  geom_bar(stat = "identity", fill = "navyblue") +
+  labs(title = "Number of Rating by Overall Rating",
+       x = "Overall Rating",
+       y = "Number of Ratings") +
+  theme_minimal()
+```
+
+```{r}
+# Create the bar chart to represent the distribution of number of received ratings (no_ratings) and the number of received reviews (no_reviews)
+library(ggplot2)
+
+# Assuming df_view has one row per product with columns: overall_rating and no_ratings
+ggplot(updated, aes(x = factor(no_ratings), y = no_reviews)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  labs(title = "Number of Reviews by Number of Ratings",
+       x = "Number of Ratings",
+       y = "Number of Reviews") +
+  theme_minimal()
+```
+
+```{r}
+# Data Analysis
+# Create the regression model to predict "overall_rating" using "no_ratings"
+library(mlbench)
+library(caret)
+
+df <- select_if(updated, is.numeric)
+??updated
+
+# Train/test split (80/20)
+set.seed(123)
+split_idx <- createDataPartition(df$overall_rating, p = 0.8, list = FALSE)
+train <- df[split_idx, ]
+test <- df[-split_idx, ]
+dim(train)
+dim(test)
+# Fit linear model
+model <- lm(overall_rating ~ no_ratings, data = train) # prev
+model <- train(overall_rating ~ no_ratings,
+               data = train,
+               method = "lm")
+# Predict on test set
+pred <- predict(model, newdata = test)
+
+# Evaluate performance
+actual <- test$overall_rating
+rmse <- RMSE(pred, actual)
+
+# Results
+summary(model)
+rmse
+
+```
+
+```{r}
+# Create the regression model to predict "overall_rating" using "no_ratings" and "no_reviews"
+library(mlbench)
+library(caret)
+
+df <- select_if(updated, is.numeric)
+??updated
+
+# Train/test split (80/20)
+set.seed(123)
+split_idx <- createDataPartition(df$overall_rating, p = 0.8, list = FALSE)
+train <- df[split_idx, ]
+test <- df[-split_idx, ]
+dim(train)
+dim(test)
+# Fit linear model
+model2 <- train(overall_rating ~ no_ratings + no_reviews,
+               data = train,
+               method = "lm")
+# Predict on test set
+pred2 <- predict(model2, newdata = test)
+
+# Evaluate performance
+actual <- test$overall_rating
+rmse2 <- RMSE(pred2, actual)
+
+# Results
+summary(model2)
+rmse2
+
+```
+
+```{r}
+# The second regression model with three variables("overall_rating", "no_ratings",and "no_reviews") is better than the first one because it has lower RMSE.
+```
