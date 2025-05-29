@@ -1,0 +1,8 @@
+.DS_Store
+node_modules
+.tmp
+npm-debug.log
+back-end/credentials.json
+back-end/dist
+back-end/.env
+back-end/prod-env.yaml
